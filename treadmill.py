@@ -17,9 +17,11 @@ CONTROL_POINT_UUID = "00002ad9-0000-1000-8000-00805f9b34fb"
 # OpCodes
 SPEED_OP_CODE = 0x02
 START_OP_CODE = 0x07
-STOP_OP_CODE = 0x08
+STOP_PAUSE_OP_CODE = 0x08
 
-START_STOP_HEX = 0x00
+
+STOP_HEX = 0x01
+PAUSE_HEX = 0x02
 
 
 async def connect_to_treadmill():
@@ -67,21 +69,27 @@ async def write_speed(client, speed_ms: float):
         speed_bytes = int(speed_ms * 100).to_bytes(2, byteorder='little')
         command = bytearray([SPEED_OP_CODE]) + speed_bytes
 
-        await client.write_gatt_char(CONTROL_POINT_UUID, command)
-        print(f"Speed set to {speed_ms} m/s")
+        response = await client.write_gatt_char(CONTROL_POINT_UUID, command, response=True)
+        print(f"Speed set to {speed_ms} m/s, response: {response}")
     else:
         print("Failed to connect")
 
 
 async def write_start_command(client):
-    command = bytearray([START_OP_CODE, START_STOP_HEX])
-    await client.write_gatt_char(CONTROL_POINT_UUID, command)
-    print("Started Treadmill...")
+    command = bytearray([START_OP_CODE])
+    response = await client.write_gatt_char(CONTROL_POINT_UUID, command, response=True)
+    print(f"Started Treadmill... {response}")
 
 async def write_stop_command(client):
-    command = bytearray([STOP_OP_CODE, START_STOP_HEX])
-    await client.write_gatt_char(CONTROL_POINT_UUID, command)
-    print("Stopped Treadmill...")
+    command = bytearray([STOP_PAUSE_OP_CODE, STOP_HEX])
+    response = await client.write_gatt_char(CONTROL_POINT_UUID, command, response=True)
+    print(f"Stopped Treadmill... {response}")
+
+
+async def write_pause_command(client):
+    command = bytearray([STOP_PAUSE_OP_CODE, PAUSE_HEX])
+    response = await client.write_gatt_char(CONTROL_POINT_UUID, command, response=True)
+    print(f"Stopped Treadmill... {response}")
 
 
 async def run_workout(client, workout):

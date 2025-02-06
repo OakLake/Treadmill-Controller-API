@@ -16,7 +16,7 @@ jobs:
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
 
       - name: Install dependencies
-        run: uv install
+        run: uv pip install
 
       - name: Run Linting
         run: uv run poe lint

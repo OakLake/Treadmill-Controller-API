@@ -105,8 +105,8 @@ if __name__ == "__main__":
     print("Initialising Treadmill Control")
     from bleak import BleakClient, BleakError, discover
 
-    from treadmill.secret import TREADMILL_ADDR
-    from workouts import easy_30min_slow
+    from src.treadmill.secret import TREADMILL_ADDR
+    from src.workouts import easy_30min_slow
 
     async def scan_devices():
         """Scan for bluetooth devices."""

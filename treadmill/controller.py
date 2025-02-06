@@ -58,8 +58,8 @@ class TreadmillController:
             "time_s": int.from_bytes(data[17:19], "little"),
         }
 
-        metrics = ", ".join([f"{name}: {value}" for name, value in metrics.items()])
-        print(metrics)
+        metrics_log = ", ".join([f"{name}: {value}" for name, value in metrics.items()])
+        print(metrics_log)
 
     async def subscribe(self):
         await self.client.start_notify(self.data_point_uuid, self._notification_handler)
@@ -75,6 +75,8 @@ class TreadmillController:
 
 if __name__ == "__main__":
     print("Initialising Treadmill Control")
+    import os
+
     from bleak import BleakClient, BleakError
 
     async def scan_devices():
@@ -82,7 +84,7 @@ if __name__ == "__main__":
         for device in devices:
             print(device)
 
-    treadmill_address = ""
+    treadmill_address = os.environ["TREADMILL_ADDR"]
     data_point_uuid = "00002acd-0000-1000-8000-00805f9b34fb"
     control_point_uuid = "00002ad9-0000-1000-8000-00805f9b34fb"
 
@@ -95,14 +97,16 @@ if __name__ == "__main__":
         await controller.pause()
         await asyncio.sleep(5)
         await controller.stop()
-        
+
     async def main():
         try:
             async with BleakClient(treadmill_address) as client:
                 controller = TreadmillController(
                     client, control_point_uuid, data_point_uuid
                 )
-                await asyncio.gather(controller.subscribe(), run_workout(client, controller))
+                await asyncio.gather(
+                    controller.subscribe(), run_workout(client, controller)
+                )
         except BleakError as e:
             print(f"Could not connect: {e}")
 

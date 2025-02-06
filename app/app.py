@@ -1,10 +1,10 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.middleware.cors import CORSMiddleware
+import asyncio
+import random
 from contextlib import asynccontextmanager
 from typing import Literal
-import random
 
-import asyncio
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 
 store = {
     "speed": 0,

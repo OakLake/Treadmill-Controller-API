@@ -1,3 +1,5 @@
+"""FastAPI application for control of treadmill and reading of telemetry."""
+
 import asyncio
 import random
 from contextlib import asynccontextmanager
@@ -15,6 +17,7 @@ store = {
 
 
 async def fetch_telemetry():
+    """Get the telemetry from the treadmill."""
     global store
     while True:
         print("Fetching data...")
@@ -28,6 +31,7 @@ async def fetch_telemetry():
 # TODO: convert to lifespan event "startup" and write async polling of treadmill.
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Objects available throughout app lifespan."""
     global store
     task = asyncio.create_task(fetch_telemetry())
     try:
@@ -47,23 +51,27 @@ app.add_middleware(
 )
 
 
-@app.get("/")
-async def read_root():
-    return {"Hello": "World"}
-
-
 @app.post("/start")
 async def start():
+    """Start the treadmill."""
     return {"start": True}
+
+
+@app.post("/puase")
+async def pause():
+    """Pause the treadmill."""
+    return {"pause": True}
 
 
 @app.post("/stop")
 async def stop():
+    """Stop the treadmill."""
     return {"stop": True}
 
 
 @app.post("/speed")
 async def set_speed(option: Literal["increase"] | Literal["decrease"]):
+    """Increase/Decrease speed of treadmill by 1m/s increments."""
     value = 1 if option == "increase" else -1
     store["speed"] += value
     return {"speed": store["speed"]}
@@ -71,6 +79,7 @@ async def set_speed(option: Literal["increase"] | Literal["decrease"]):
 
 @app.websocket("/ws")
 async def telemetry(*, websocket: WebSocket):
+    """Websocket for passing on treadmill telemetry to clients."""
     await websocket.accept()
     try:
         while True:

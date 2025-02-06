@@ -1,3 +1,5 @@
+"""Workouts to choose from."""
+
 # 20-Minute HIIT Sprint Workout
 workout_20min = [
     (3, 120),  # Warm-up

@@ -1,0 +1,22 @@
+name: Run Linting
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  run-uv-task:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Install dependencies
+        run: uv install
+
+      - name: Run Linting
+        run: uv run poe lint

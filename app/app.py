@@ -1,6 +1,7 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from typing import Literal
 import random
 
 import asyncio
@@ -61,15 +62,10 @@ async def stop():
     return {"stop": True}
 
 
-@app.post("/speed/increase")
-async def set_speed():
-    store["speed"] += 1
-    return {"speed": store["speed"]}
-
-
-@app.post("/speed/decrease")
-async def set_speed():
-    store["speed"] -= 1
+@app.post("/speed")
+async def set_speed(option: Literal["increase"] | Literal["decrease"]):
+    value = 1 if option == "increase" else -1
+    store["speed"] += value
     return {"speed": store["speed"]}
 
 
@@ -87,7 +83,7 @@ async def telemetry(*, websocket: WebSocket):
                 }
             )
             await asyncio.sleep(3)
-    except WebSocketDiconnect:
+    except WebSocketDisconnect:
         print("Clinet disconnected")
     except Exception as e:
         print("EX: ", e)

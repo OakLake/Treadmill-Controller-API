@@ -31,9 +31,10 @@ class TreadmillController:
     async def _write_command(self, command):
         """Write a command to the treadmill."""
         try:
-            await self.client.write_gatt_char(
-                self.control_point_uuid, command, response=False
+            _ = await self.client.write_gatt_char(
+                self.control_point_uuid, command, response=True
             )
+            print("\rCommand sent.\n")
         except Exception:
             print(f"FAILED to write command '{command}'")
 
@@ -102,9 +103,10 @@ class TreadmillController:
 
 if __name__ == "__main__":
     print("Initialising Treadmill Control")
-    import os
-
     from bleak import BleakClient, BleakError, discover
+
+    from treadmill.secret import TREADMILL_ADDR
+    from workouts import easy_30min_slow
 
     async def scan_devices():
         """Scan for bluetooth devices."""
@@ -112,17 +114,24 @@ if __name__ == "__main__":
         for device in devices:
             print(device)
 
-    treadmill_address = os.environ["TREADMILL_ADDR"]
+    treadmill_address = TREADMILL_ADDR
     data_point_uuid = "00002acd-0000-1000-8000-00805f9b34fb"
     control_point_uuid = "00002ad9-0000-1000-8000-00805f9b34fb"
 
     async def run_workout(controller):
         """Run a series of commands simulating a workout."""
         await controller.start()
-        await controller.set_speed(1.5)
-        await asyncio.sleep(10)
-        await controller.set_speed(3.0)
-        await asyncio.sleep(30 * 60)
+        await asyncio.sleep(5)
+        #
+        ##
+        ###
+        for interval in easy_30min_slow.intervals:
+            speed_ms, duration_s = interval
+            await controller.set_speed(speed_ms)
+            await asyncio.sleep(duration_s)
+        ###
+        ##
+        #
         await controller.pause()
         await asyncio.sleep(5)
         await controller.stop()
@@ -136,6 +145,7 @@ if __name__ == "__main__":
                 )
                 await asyncio.gather(controller.subscribe(), run_workout(controller))
         except BleakError as e:
-            print(f"Could not connect: {e}")
+            print(f"\rCould not connect: {e}")
 
     asyncio.run(main())
+    # asyncio.run(scan_devices())

@@ -8,12 +8,8 @@ from typing import Literal
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
-store = {
-    "speed": 0,
-    "distance": 0,
-    "time": 0,
-    "calories": 0,
-}
+treadmill_controller = ...
+store = {}
 
 
 async def fetch_telemetry():

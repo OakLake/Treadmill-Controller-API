@@ -24,30 +24,29 @@ class TreadmillController:
                 self.control_point_uuid, command, response=True
             )
             print(
-                f"Written command '{command.hex}' to treadmill. Response: '{response}'"
+                f"Written command '{command.hex()}' to treadmill. Response: '{response}'"
             )
         except Exception:
             print(f"FAILED to write command '{command}'")
 
     async def start(self):
         command = bytearray([START_OP_CODE])
-        self._write_command(command)
+        await self._write_command(command)
         # Sleep for the 5 second countdown.
-        await asyncio.sleep(5)
 
     async def pause(self):
         command = bytearray([STOP_PAUSE_OP_CODE, PAUSE_HEX])
-        self._write_command(command)
+        await self._write_command(command)
 
     async def stop(self):
         command = bytearray([STOP_PAUSE_OP_CODE, STOP_HEX])
         self.stop_event.set()
-        self._write_command(command)
+        await self._write_command(command)
 
     async def set_speed(self, speed_mps: float):
         speed_bytes = int(speed_mps * 100).to_bytes(2, byteorder="little")
         command = bytearray([SPEED_OP_CODE]) + speed_bytes
-        self._write_command(command)
+        await self._write_command(command)
 
     @staticmethod
     async def _notification_handler(_, data: bytearray):
@@ -105,7 +104,7 @@ if __name__ == "__main__":
                     client, control_point_uuid, data_point_uuid
                 )
                 await asyncio.gather(
-                    controller.subscribe(), run_workout(client, controller)
+                    controller.subscribe(), run_workout(controller)
                 )
         except BleakError as e:
             print(f"Could not connect: {e}")

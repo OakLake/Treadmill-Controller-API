@@ -20,11 +20,8 @@ class TreadmillController:
 
     async def _write_command(self, command):
         try:
-            response = await self.client.write_gatt_char(
-                self.control_point_uuid, command, response=True
-            )
-            print(
-                f"Written command '{command.hex()}' to treadmill. Response: '{response}'"
+            await self.client.write_gatt_char(
+                self.control_point_uuid, command, response=False
             )
         except Exception:
             print(f"FAILED to write command '{command}'")
@@ -50,15 +47,20 @@ class TreadmillController:
 
     @staticmethod
     async def _notification_handler(_, data: bytearray):
+        time_seconds = int.from_bytes(data[17:19], "little")
+        time_hours, remainder = time_seconds // (60 * 60), time_seconds % (60 * 60)
+        time_minutes, remainder = remainder // 60, remainder % 60
+        time = f"{time_hours:02d}:{time_minutes:02d}:{remainder:02d}"
+
         metrics = {
-            "speed": int.from_bytes(data[2:4], "little") / 100,
-            "distance_m": int.from_bytes(data[4:11], "little"),
-            "calories": int.from_bytes(data[11:13], "little"),
-            "time_s": int.from_bytes(data[17:19], "little"),
+            "speed_ms": f"{int.from_bytes(data[2:4], "little") / 100:05.2f}",
+            "distance_m": f"{int.from_bytes(data[4:11], "little"):04d}",
+            "calories": f"{int.from_bytes(data[11:13], "little"):04d}",
+            "time (HH:MM:SS)": time
         }
 
         metrics_log = ", ".join([f"{name}: {value}" for name, value in metrics.items()])
-        print(metrics_log)
+        print(metrics_log, end="\r")
 
     async def subscribe(self):
         await self.client.start_notify(self.data_point_uuid, self._notification_handler)
@@ -92,7 +94,7 @@ if __name__ == "__main__":
         await controller.set_speed(1.5)
         await asyncio.sleep(10)
         await controller.set_speed(3.0)
-        await asyncio.sleep(10)
+        await asyncio.sleep(30 * 60)
         await controller.pause()
         await asyncio.sleep(5)
         await controller.stop()

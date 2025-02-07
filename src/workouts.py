@@ -23,10 +23,27 @@ class Workout:
         self.intervals.append((speed_ms, duration_s))
         return self
 
+    def to_json(self):
+        return {ix: value for ix, value in enumerate(self.intervals)}
+
 
 easy_30min_slow = (
     Workout("Easy 30min Slow")
-    .add_interval(3.2, 10 * SEC_TO_MIN)
-    .add_interval(5.0, 15 * SEC_TO_MIN)
-    .add_interval(3.6, 10 * SEC_TO_MIN)
+    .add_interval(3.2, 10)
+    .add_interval(5.0, 10)
+    .add_interval(3.6, 10)
+    .add_interval(4.2, 10)
 )
+
+easy_40min_slow = (
+    Workout("Easy 40min Slow")
+    .add_interval(3.2, 15 * SEC_TO_MIN)
+    .add_interval(5.0, 20 * SEC_TO_MIN)
+    .add_interval(3.6, 5 * SEC_TO_MIN)
+)
+
+
+register = {
+    easy_30min_slow.name: easy_30min_slow,
+    easy_40min_slow.name: easy_40min_slow,
+}

@@ -1,6 +1,7 @@
 """Class for controlling the treadmill functions and recieving information from it."""
 
 import asyncio
+from typing import Any
 
 # OpCodes
 SPEED_OP_CODE = 0x02
@@ -15,7 +16,13 @@ PAUSE_HEX = 0x02
 class TreadmillController:
     """Controll and communicate with treadmill."""
 
-    def __init__(self, client, control_point_uuid: str, data_point_uuid: str):
+    def __init__(
+        self,
+        client,
+        control_point_uuid: str,
+        data_point_uuid: str,
+        telemetry_queue,
+    ):
         """Initialise the treadmill controller.
 
         Args:
@@ -27,6 +34,7 @@ class TreadmillController:
         self.control_point_uuid = control_point_uuid
         self.data_point_uuid = data_point_uuid
         self.stop_event = asyncio.Event()
+        self.telemetry_queue = telemetry_queue
 
     async def _write_command(self, command):
         """Write a command to the treadmill."""
@@ -40,14 +48,16 @@ class TreadmillController:
 
     async def start(self):
         """Start the treadmill."""
+        self.stop_event.clear()
         command = bytearray([START_OP_CODE])
         await self._write_command(command)
 
-    async def pause(self):
+    async def _pause(self):
         """Pause the treadmill.
 
         Does not wipe progress.
         """
+        self.stop_event.set()
         command = bytearray([STOP_PAUSE_OP_CODE, PAUSE_HEX])
         await self._write_command(command)
 
@@ -56,8 +66,8 @@ class TreadmillController:
 
         Wipes any progress.
         """
-        command = bytearray([STOP_PAUSE_OP_CODE, STOP_HEX])
         self.stop_event.set()
+        command = bytearray([STOP_PAUSE_OP_CODE, STOP_HEX])
         await self._write_command(command)
 
     async def set_speed(self, speed_mps: float):
@@ -70,8 +80,7 @@ class TreadmillController:
         command = bytearray([SPEED_OP_CODE]) + speed_bytes
         await self._write_command(command)
 
-    @staticmethod
-    async def _notification_handler(_, data: bytearray):
+    async def _notification_handler(self, _, data: bytearray):
         """Handle parsing of telemetry notifications from treadmill."""
         time_seconds = int.from_bytes(data[17:19], "little")
         time_hours, remainder = time_seconds // (60 * 60), time_seconds % (60 * 60)
@@ -82,31 +91,43 @@ class TreadmillController:
             "speed_ms": f"{int.from_bytes(data[2:4], "little") / 100:05.2f}",
             "distance_m": f"{int.from_bytes(data[4:11], "little"):04d}",
             "calories": f"{int.from_bytes(data[11:13], "little"):04d}",
-            "time (HH:MM:SS)": time,
+            "time": time,
         }
 
-        metrics_log = ", ".join([f"{name}: {value}" for name, value in metrics.items()])
-        print(metrics_log, end="\r")
+        await self.telemetry_queue.put(metrics)
+
+        # metrics_log = ", ".join([f"{name}: {value}" for name, value in metrics.items()])
 
     async def subscribe(self):
         """Subscribe to treadmill telemetry notifications."""
         await self.client.start_notify(self.data_point_uuid, self._notification_handler)
         print("Subscribed to notifications.")
 
-        try:
-            while not self.stop_event.is_set() and await self.client.is_connected():
-                await asyncio.sleep(1)
-        finally:
-            await self.client.stop_notify(self.data_point_uuid)
-            print("Stopped subscription.")
+    async def start_workout(self, intervals):
+        # Make sure all is stopped
+        await self.start()
+        await asyncio.sleep(5)
+        #
+        ##
+        ###
+        for interval in intervals:
+            if self.stop_event.is_set():
+                break
+            speed_ms, duration_s = interval
+            await self.set_speed(speed_ms)
+            await asyncio.sleep(duration_s)
+        ###
+        ##
+        #
+        await self._pause()
 
 
 if __name__ == "__main__":
     print("Initialising Treadmill Control")
     from bleak import BleakClient, BleakError, discover
 
+    from src import workouts
     from src.treadmill.secret import TREADMILL_ADDR
-    from src.workouts import easy_30min_slow
 
     async def scan_devices():
         """Scan for bluetooth devices."""
@@ -125,7 +146,7 @@ if __name__ == "__main__":
         #
         ##
         ###
-        for interval in easy_30min_slow.intervals:
+        for interval in workouts.easy_30min_slow.intervals:
             speed_ms, duration_s = interval
             await controller.set_speed(speed_ms)
             await asyncio.sleep(duration_s)
@@ -140,8 +161,9 @@ if __name__ == "__main__":
         """Run the main entrypoint."""
         try:
             async with BleakClient(treadmill_address) as client:
+                telemetry_queue = asyncio.Queue()
                 controller = TreadmillController(
-                    client, control_point_uuid, data_point_uuid
+                    client, control_point_uuid, data_point_uuid, telemetry_queue
                 )
                 await asyncio.gather(controller.subscribe(), run_workout(controller))
         except BleakError as e:

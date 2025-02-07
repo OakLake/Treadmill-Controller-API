@@ -1,40 +1,51 @@
 """FastAPI application for control of treadmill and reading of telemetry."""
 
 import asyncio
-import random
 from contextlib import asynccontextmanager
-from typing import Literal
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from bleak import BleakClient, BleakError
+from fastapi import Body, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+from src import workouts
+from src.treadmill.controller import TreadmillController
+from src.treadmill.secret import TREADMILL_ADDR
 
 treadmill_controller = ...
-store = {}
 
 
-async def fetch_telemetry():
-    """Get the telemetry from the treadmill."""
-    global store
-    while True:
-        print("Fetching data...")
-        store["speed"] = random.randint(100, 500)
-        store["distance"] = random.randint(100, 500)
-        store["time"] = random.randint(100, 500)
-        store["calories"] = random.randint(100, 500)
-        await asyncio.sleep(3)
-
-
-# TODO: convert to lifespan event "startup" and write async polling of treadmill.
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Objects available throughout app lifespan."""
-    global store
-    task = asyncio.create_task(fetch_telemetry())
+    global treadmill_controller
+
+    treadmill_address = TREADMILL_ADDR
+    data_point_uuid = "00002acd-0000-1000-8000-00805f9b34fb"
+    control_point_uuid = "00002ad9-0000-1000-8000-00805f9b34fb"
+
+    app.state.telemetry_queue = asyncio.Queue()
+
+    client = BleakClient(treadmill_address)
+    try:
+        await client.connect()
+        treadmill_controller = TreadmillController(
+            client, control_point_uuid, data_point_uuid, app.state.telemetry_queue
+        )
+    except BleakError as e:
+        print(f"\rCould not connect: {e}")
+
+    print("HERE")
+    task = asyncio.create_task(treadmill_controller.subscribe())
+    print("THERE")
     try:
         yield
     finally:
         task.cancel()
         await task
+        treadmill_controller.stop_event.is_set()
+        await client.stop_notify(data_point_uuid)
+        await client.disconnect()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -50,44 +61,67 @@ app.add_middleware(
 @app.post("/start")
 async def start():
     """Start the treadmill."""
+    await treadmill_controller.start()
     return {"start": True}
 
 
-@app.post("/puase")
-async def pause():
+@app.post("/resume")
+async def resume():
     """Pause the treadmill."""
+    treadmill_controller.stop_event.clear()
     return {"pause": True}
 
 
 @app.post("/stop")
 async def stop():
     """Stop the treadmill."""
+    await treadmill_controller.stop()
     return {"stop": True}
 
 
+@app.get("/workouts")
+async def get_workouts():
+    return [
+        {
+            "name": workouts.easy_30min_slow.name,
+            "plan": workouts.easy_30min_slow.to_json(),
+        },
+        {
+            "name": workouts.easy_40min_slow.name,
+            "plan": workouts.easy_40min_slow.to_json(),
+        },
+    ]
+
+
+class WorkoutBody(BaseModel):
+    name: str
+
+
+@app.post("/start-workout")
+async def start_workout(workout: WorkoutBody):
+    print(workout)
+    print(f"Commanded to start workout: '{workout.name}'")
+    intervals = workouts.register[workout.name].intervals
+    asyncio.create_task(treadmill_controller.start_workout(intervals))
+
+
 @app.post("/speed")
-async def set_speed(option: Literal["increase"] | Literal["decrease"]):
+async def set_speed(value: float):
     """Increase/Decrease speed of treadmill by 1m/s increments."""
-    value = 1 if option == "increase" else -1
-    store["speed"] += value
-    return {"speed": store["speed"]}
+    await treadmill_controller.set_speed(value)
+    return {"speed": value}
 
 
 @app.websocket("/ws")
 async def telemetry(*, websocket: WebSocket):
     """Websocket for passing on treadmill telemetry to clients."""
     await websocket.accept()
+    queue = app.state.telemetry_queue  # Get shared queue
+
     try:
         while True:
-            await websocket.send_json(
-                {
-                    "distance": random.randint(1, 100),
-                    "time": random.randint(1, 100),
-                    "calories": random.randint(1, 100),
-                    "speed": random.randint(1, 100),
-                }
-            )
-            await asyncio.sleep(3)
+            data = await queue.get()
+            await websocket.send_json(data)
     except WebSocketDisconnect:
         print("Clinet disconnected")
     except Exception as e:

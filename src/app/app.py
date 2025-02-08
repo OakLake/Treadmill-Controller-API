@@ -25,6 +25,7 @@ async def lifespan(app: FastAPI):
     control_point_uuid = "00002ad9-0000-1000-8000-00805f9b34fb"
 
     app.state.telemetry_queue = asyncio.Queue()
+    app.state.height = None
 
     client = BleakClient(treadmill_address)
     try:
@@ -70,6 +71,15 @@ async def resume():
     """Pause the treadmill."""
     treadmill_controller.stop_event.clear()
     return {"pause": True}
+
+
+class BioMetrics(BaseModel):
+    height_cm: int
+
+@app.post("/bio-metrics")
+async def set_bio_metrics(bio_metrics: BioMetrics):
+    """Pause the treadmill."""
+    app.state.height = bio_metrics.height_cm
 
 
 @app.post("/stop")
@@ -121,6 +131,11 @@ async def telemetry(*, websocket: WebSocket):
     try:
         while True:
             data = await queue.get()
+            if app.state.height is not None:
+                steps = (app.state.height * 0.415) / data["distance_m"]
+                data["steps"] = steps
+            else:
+                data["steps"] = 0
             await websocket.send_json(data)
     except WebSocketDisconnect:
         print("Clinet disconnected")

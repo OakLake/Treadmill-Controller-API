@@ -132,7 +132,6 @@ async def telemetry(*, websocket: WebSocket):
         while True:
             data = await queue.get()
             if app.state.height is not None:
-                steps = data["distance_m"] / (app.state.height / 100 * 0.415) 
                 data["steps"] = steps
             else:
                 data["steps"] = 0

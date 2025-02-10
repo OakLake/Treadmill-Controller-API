@@ -42,7 +42,7 @@ class TreadmillController:
             _ = await self.client.write_gatt_char(
                 self.control_point_uuid, command, response=True
             )
-            print("\rCommand sent.\n")
+            print(f"\rCommand '{command.hex()}' sent.\n")
         except Exception:
             print(f"FAILED to write command '{command}'")
 
@@ -76,7 +76,9 @@ class TreadmillController:
         Args:
             speed_mps: Speed to set the treadmill to in meters per seconds.
         """
-        speed_bytes = int(speed_mps * 100).to_bytes(2, byteorder="little")
+        target_speed = int(str(round(speed_mps, 2)).replace(".", "") + "0")
+        print(f"Target speed: {target_speed}")
+        speed_bytes = target_speed.to_bytes(2, byteorder="little")
         command = bytearray([SPEED_OP_CODE]) + speed_bytes
         await self._write_command(command)
 

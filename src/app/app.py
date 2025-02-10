@@ -2,7 +2,9 @@
 
 import asyncio
 from contextlib import asynccontextmanager
+from decimal import *
 
+getcontext().prec = 2
 from bleak import BleakClient, BleakError
 from fastapi import Body, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -76,6 +78,7 @@ async def resume():
 class BioMetrics(BaseModel):
     height_cm: int
 
+
 @app.post("/bio-metrics")
 async def set_bio_metrics(bio_metrics: BioMetrics):
     """Pause the treadmill."""
@@ -116,7 +119,7 @@ async def start_workout(workout: WorkoutBody):
 
 
 @app.post("/speed")
-async def set_speed(value: float):
+async def set_speed(value: Decimal):
     """Increase/Decrease speed of treadmill by 1m/s increments."""
     await treadmill_controller.set_speed(value)
     return {"speed": value}
@@ -132,7 +135,9 @@ async def telemetry(*, websocket: WebSocket):
         while True:
             data = await queue.get()
             if app.state.height is not None:
-                steps = int(int(data["distance_m"]) / (int(app.state.height) / 100 * 0.415) )
+                steps = int(
+                    int(data["distance_m"]) / (int(app.state.height) / 100 * 0.415)
+                )
                 data["steps"] = steps
             else:
                 data["steps"] = 0

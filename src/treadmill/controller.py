@@ -1,6 +1,7 @@
 """Class for controlling the treadmill functions and recieving information from it."""
 
 import asyncio
+from decimal import Decimal
 from typing import Any
 
 # OpCodes
@@ -70,13 +71,13 @@ class TreadmillController:
         command = bytearray([STOP_PAUSE_OP_CODE, STOP_HEX])
         await self._write_command(command)
 
-    async def set_speed(self, speed_mps: float):
+    async def set_speed(self, speed_mps: Decimal):
         """Set the speed of the treadmill.
 
         Args:
             speed_mps: Speed to set the treadmill to in meters per seconds.
         """
-        target_speed = int(str(round(speed_mps, 2)).replace(".", "") + "0")
+        target_speed = int(speed_mps * 100)
         print(f"Target speed: {target_speed}")
         speed_bytes = target_speed.to_bytes(2, byteorder="little")
         command = bytearray([SPEED_OP_CODE]) + speed_bytes

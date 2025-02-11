@@ -94,16 +94,7 @@ async def stop():
 
 @app.get("/workouts")
 async def get_workouts():
-    return [
-        {
-            "name": workouts.easy_30min_slow.name,
-            "plan": workouts.easy_30min_slow.to_json(),
-        },
-        {
-            "name": workouts.easy_40min_slow.name,
-            "plan": workouts.easy_40min_slow.to_json(),
-        },
-    ]
+    return [{name: plan.to_json()} for name, plan in workouts.register.items()]
 
 
 class WorkoutBody(BaseModel):

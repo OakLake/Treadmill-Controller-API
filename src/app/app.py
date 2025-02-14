@@ -103,7 +103,7 @@ def get_health_stats():
 
 @app.get("/workouts")
 async def get_workouts():
-    return [{name: plan.to_json()} for name, plan in workouts.register.items()]
+    return [{"name": name, "plan": plan.to_json()} for name, plan in workouts.register.items()]
 
 
 class WorkoutBody(BaseModel):
@@ -147,7 +147,7 @@ async def telemetry(*, websocket: WebSocket):
                 )
                 data["steps"] = steps
             else:
-                data["steps"] = 0
+                data["steps"] = -1
             await websocket.send_json(data)
     except WebSocketDisconnect:
         print("Clinet disconnected")

@@ -125,6 +125,13 @@ async def set_speed(value: Decimal):
     return {"speed": value}
 
 
+@app.post("/height")
+async def set_height(value: int):
+    """Set height of user for more accurate steps calculation."""
+    app.state.height = value
+    return {"height": value}
+
+
 @app.websocket("/ws")
 async def telemetry(*, websocket: WebSocket):
     """Websocket for passing on treadmill telemetry to clients."""

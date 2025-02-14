@@ -26,7 +26,7 @@ async def lifespan(app: FastAPI):
     data_point_uuid = "00002acd-0000-1000-8000-00805f9b34fb"
     control_point_uuid = "00002ad9-0000-1000-8000-00805f9b34fb"
 
-    app.state.telemetry_queue = asyncio.Queue()
+    app.state.telemetry_queue = asyncio.Queue(maxsize=5)
     app.state.height = None
 
     client = BleakClient(treadmill_address)

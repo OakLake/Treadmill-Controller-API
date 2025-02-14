@@ -28,6 +28,7 @@ async def lifespan(app: FastAPI):
 
     app.state.telemetry_queue = asyncio.Queue(maxsize=5)
     app.state.height = None
+    app.state.final_telmetry = None
 
     client = BleakClient(treadmill_address)
     try:
@@ -88,8 +89,16 @@ async def set_bio_metrics(bio_metrics: BioMetrics):
 @app.post("/stop")
 async def stop():
     """Stop the treadmill."""
+    queue = app.state.telemetry_queue
+    app.state.final_telmetry = await queue.get()
     await treadmill_controller.stop()
     return {"stop": True}
+
+
+@app.get("/health-stats")
+def get_health_stats():
+    """Get health stats such as distance and calories."""
+    return app.state.final_telmetry
 
 
 @app.get("/workouts")

@@ -4,7 +4,6 @@ import asyncio
 from contextlib import asynccontextmanager
 from decimal import *
 
-getcontext().prec = 2
 from bleak import BleakClient, BleakError
 from fastapi import Body, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,6 +13,7 @@ from src import workouts
 from src.treadmill.controller import TreadmillController
 from src.treadmill.secret import TREADMILL_ADDR
 
+getcontext().prec = 2
 treadmill_controller = ...
 
 
@@ -39,9 +39,8 @@ async def lifespan(app: FastAPI):
     except BleakError as e:
         print(f"\rCould not connect: {e}")
 
-    print("HERE")
     task = asyncio.create_task(treadmill_controller.subscribe())
-    print("THERE")
+
     try:
         yield
     finally:
@@ -62,6 +61,14 @@ app.add_middleware(
 )
 
 
+class BioMetrics(BaseModel):
+    height_cm: int
+
+
+class WorkoutBody(BaseModel):
+    name: str
+
+
 @app.post("/start")
 async def start():
     """Start the treadmill."""
@@ -74,10 +81,6 @@ async def resume():
     """Pause the treadmill."""
     treadmill_controller.stop_event.clear()
     return {"pause": True}
-
-
-class BioMetrics(BaseModel):
-    height_cm: int
 
 
 @app.post("/bio-metrics")
@@ -103,11 +106,10 @@ def get_health_stats():
 
 @app.get("/workouts")
 async def get_workouts():
-    return [{"name": name, "plan": plan.to_json()} for name, plan in workouts.register.items()]
-
-
-class WorkoutBody(BaseModel):
-    name: str
+    return [
+        {"name": name, "plan": plan.to_json()}
+        for name, plan in workouts.register.items()
+    ]
 
 
 @app.post("/start-workout")
@@ -143,7 +145,7 @@ async def telemetry(*, websocket: WebSocket):
             data = await queue.get()
             if app.state.height is not None:
                 steps = int(
-                    int(data["distance_m"]) / (int(app.state.height) / 100 * 0.415)
+                    int(data["distance"]) / (int(app.state.height) / 100 * 0.415)
                 )
                 data["steps"] = steps
             else:

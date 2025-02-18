@@ -24,6 +24,7 @@ class Workout:
         return self
 
     def to_json(self):
+        """Convert the workout into json format."""
         return {ix: value for ix, value in enumerate(self.intervals)}
 
 

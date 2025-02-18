@@ -104,7 +104,8 @@ class TreadmillController:
         await self.client.start_notify(self.data_point_uuid, self._notification_handler)
         print("Subscribed to notifications.")
 
-    async def start_workout(self, intervals: tuple[float, int]):
+    async def start_workout(self, intervals: list[tuple[Decimal, int]]):
+        """Start a workout."""
         # Make sure all is stopped
         await self.start()
         await asyncio.sleep(5)

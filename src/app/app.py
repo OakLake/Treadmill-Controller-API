@@ -1,11 +1,12 @@
+# type: ignore[attr-defined,syntax]
 """FastAPI application for control of treadmill and reading of telemetry."""
 
 import asyncio
 from contextlib import asynccontextmanager
-from decimal import *
+from decimal import Decimal, getcontext
 
 from bleak import BleakClient, BleakError
-from fastapi import Body, FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -62,10 +63,14 @@ app.add_middleware(
 
 
 class BioMetrics(BaseModel):
+    """User biometric info for customisation."""
+
     height_cm: int
 
 
 class WorkoutBody(BaseModel):
+    """Workout information."""
+
     name: str
 
 
@@ -106,6 +111,7 @@ def get_health_stats():
 
 @app.get("/workouts")
 async def get_workouts():
+    """Get all available workouts."""
     return [
         {"name": name, "plan": plan.to_json()}
         for name, plan in workouts.register.items()
@@ -114,6 +120,7 @@ async def get_workouts():
 
 @app.post("/start-workout")
 async def start_workout(workout: WorkoutBody):
+    """Start a workout by name."""
     print(workout)
     print(f"Commanded to start workout: '{workout.name}'")
     intervals = workouts.register[workout.name].intervals

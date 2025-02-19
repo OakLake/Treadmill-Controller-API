@@ -88,19 +88,26 @@ async def resume():
     return {"pause": True}
 
 
-@app.post("/bio-metrics")
-async def set_bio_metrics(bio_metrics: BioMetrics):
-    """Pause the treadmill."""
-    app.state.height = bio_metrics.height_cm
-
-
 @app.post("/stop")
 async def stop():
     """Stop the treadmill."""
     queue = app.state.telemetry_queue
-    app.state.final_telmetry = await queue.get()
+    data = await queue.get()
+    if app.state.height is not None:
+        steps = int(int(data["distance"]) / (int(app.state.height) / 100 * 0.415))
+        data["steps"] = steps
+    else:
+        data["steps"] = None
+
+    app.state.final_telmetry = data
     await treadmill_controller.stop()
     return {"stop": True}
+
+
+@app.post("/bio-metrics")
+async def set_bio_metrics(bio_metrics: BioMetrics):
+    """Pause the treadmill."""
+    app.state.height = bio_metrics.height_cm
 
 
 @app.get("/health-stats")
@@ -149,14 +156,27 @@ async def telemetry(*, websocket: WebSocket):
 
     try:
         while True:
-            data = await queue.get()
+            data_raw = await queue.get()
+
+            time_seconds = data_raw["speed"]
+            time_hours, remainder = time_seconds // (60 * 60), time_seconds % (60 * 60)
+            time_minutes, remainder = remainder // 60, remainder % 60
+            time = f"{time_hours:02d}:{time_minutes:02d}:{remainder:02d}"
+
+            data = {
+                "speed": f"{data_raw["speed"]:05.2f}",
+                "distance": f"{data_raw["distance"]:04d}",
+                "calories": f"{data_raw["calories"]:04d}",
+                "time": time,
+            }
             if app.state.height is not None:
                 steps = int(
                     int(data["distance"]) / (int(app.state.height) / 100 * 0.415)
                 )
                 data["steps"] = steps
             else:
-                data["steps"] = -1
+                data["steps"] = None
+
             await websocket.send_json(data)
     except WebSocketDisconnect:
         print("Clinet disconnected")

@@ -85,16 +85,11 @@ class TreadmillController:
 
     async def _notification_handler(self, _, data: bytearray):
         """Handle parsing of telemetry notifications from treadmill."""
-        time_seconds = int.from_bytes(data[17:19], "little")
-        time_hours, remainder = time_seconds // (60 * 60), time_seconds % (60 * 60)
-        time_minutes, remainder = remainder // 60, remainder % 60
-        time = f"{time_hours:02d}:{time_minutes:02d}:{remainder:02d}"
-
         metrics = {
-            "speed": f"{int.from_bytes(data[2:4], "little") / 100:05.2f}",
-            "distance": f"{int.from_bytes(data[4:11], "little"):04d}",
-            "calories": f"{int.from_bytes(data[11:13], "little"):04d}",
-            "time": time,
+            "speed": int.from_bytes(data[2:4], "little") / 100,
+            "distance": int.from_bytes(data[4:11], "little"),
+            "calories": int.from_bytes(data[11:13], "little"),
+            "time": int.from_bytes(data[17:19], "little"),
         }
 
         await self.telemetry_queue.put(metrics)

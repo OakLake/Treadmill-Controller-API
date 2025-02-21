@@ -3,6 +3,7 @@
 
 import asyncio
 from contextlib import asynccontextmanager
+from datetime import timedta
 from decimal import Decimal, getcontext
 
 from bleak import BleakClient, BleakError
@@ -157,11 +158,8 @@ async def telemetry(*, websocket: WebSocket):
     try:
         while True:
             data_raw = await queue.get()
-
-            time_seconds = data_raw["time"]
-            time_hours, remainder = time_seconds // (60 * 60), time_seconds % (60 * 60)
-            time_minutes, remainder = remainder // 60, remainder % 60
-            time = f"{time_hours:02d}:{time_minutes:02d}:{remainder:02d}"
+            
+            time = str(timedelta(seconds=data_raw["time"]))
 
             data = {
                 "speed": f"{data_raw["speed"]:05.2f}",

@@ -158,7 +158,7 @@ async def telemetry(*, websocket: WebSocket):
     try:
         while True:
             data_raw = await queue.get()
-            
+
             time = str(timedelta(seconds=data_raw["time"]))
 
             data = {

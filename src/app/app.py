@@ -3,7 +3,7 @@
 
 import asyncio
 from contextlib import asynccontextmanager
-from datetime import timedta
+from datetime import timedelta
 from decimal import Decimal, getcontext
 
 from bleak import BleakClient, BleakError

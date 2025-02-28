@@ -23,6 +23,8 @@ _isort = "isort ."
 _mypy = "mypy ."
 _flake8 = "flake8 ."
 
+serve_tui = "python src/tui/server.py"
+
 # Compound tasks
 lint = ["_mypy", "_flake8"]
 autoformat = ["_black", "_isort"]

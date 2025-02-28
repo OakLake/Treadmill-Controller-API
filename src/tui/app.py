@@ -1,15 +1,18 @@
 import asyncio
 from datetime import timedelta
+from decimal import *
 
 from bleak import BleakClient
 from textual import on
 from textual.app import App, ComposeResult
-from textual.containers import HorizontalGroup, VerticalScroll
+from textual.containers import Grid, HorizontalGroup, VerticalScroll
 from textual.message import Message
-from textual.widgets import Button, Digits, Footer, Header, Label
+from textual.widgets import Button, Digits, Footer, Header, Label, Static
 
 from src.treadmill.controller import TreadmillController
 from src.treadmill.secret import TREADMILL_ADDR, USER_HEIGHT
+
+getcontext().prec = 2
 
 
 class SpeedDisplay(Digits):
@@ -43,6 +46,7 @@ class TreadmillUpdate(Message):
 class TreadMillApp(App):
     """A Textual App to manage FTMS enabled treadmill."""
 
+    CSS_PATH = "treadmill.tcss"
     BINDINGS = []
 
     def __init__(
@@ -51,24 +55,35 @@ class TreadMillApp(App):
         super().__init__()
         self.queue = telemetry_queue
         self.controller = treadmill_controller
+        self.speed = 0
 
     def compose(self) -> ComposeResult:
         yield Header()
         yield Footer()
         yield VerticalScroll(
-            HorizontalGroup(
-                Button("Stop", id="stop", variant="error"),
-                Button("Start", id="start", variant="success"),
-            ),
-            HorizontalGroup(
-                Button("-", id="dec_speed", variant="error"),
-                Button("+", id="inc_speed", variant="success"),
-            ),
-            HorizontalGroup(Label("Duratinon"), DurationDisplay("00:00:00")),
-            HorizontalGroup(Label("Speed"), SpeedDisplay("00.0")),
-            HorizontalGroup(Label("Calories"), CaloriesDisplay("000")),
-            HorizontalGroup(Label("Distance"), DistanceDisplay("0000")),
-            HorizontalGroup(Label("Steps"), StepsDisplay("0000")),
+            Grid(
+                Static("TREADMILL CONTROL", classes="title"),
+                HorizontalGroup(
+                    Button("Stop", id="stop", variant="error"),
+                    Button("Start", id="start", variant="success"),
+                    classes="button-group",
+                ),
+                HorizontalGroup(
+                    Button("-", id="dec_speed", variant="error"),
+                    Button("+", id="inc_speed", variant="success"),
+                    classes="button-group",
+                ),
+                Static("Telemetry", classes="section-title"),
+                Grid(
+                    HorizontalGroup(Label("⚡ Speed"), SpeedDisplay("00.0")),
+                    HorizontalGroup(Label("⏳ Duration"), DurationDisplay("00:00:00")),
+                    HorizontalGroup(Label("📏 Distance"), DistanceDisplay("0000")),
+                    HorizontalGroup(Label("🔥 Calories"), CaloriesDisplay("000")),
+                    HorizontalGroup(Label("👣 Steps"), StepsDisplay("0000")),
+                    classes="telemetry",
+                ),
+                classes="main-grid",
+            )
         )
 
     @on(Button.Pressed, "#start")
@@ -81,22 +96,26 @@ class TreadMillApp(App):
 
     @on(Button.Pressed, "#inc_speed")
     async def increase_speed_treadmill(self):
-        await self.controller.set_speed(2)
+        await self.controller.set_speed(self.speed + Decimal(0.1))
 
     @on(Button.Pressed, "#dec_speed")
     async def decrease_speed_treadmill(self):
-        await self.controller.set_speed(1)
+        await self.controller.set_speed(self.speed - Decimal(0.1))
 
     async def watch_queue(self):
         while True:
             data_raw = await self.queue.get()
+
+            self.speed = Decimal(data_raw["speed"])
 
             data = {
                 "speed": f"{data_raw["speed"]:05.2f}",
                 "distance": f"{data_raw["distance"]:04d}",
                 "calories": f"{data_raw["calories"]:04d}",
                 "duration": str(timedelta(seconds=data_raw["time"])),
-                "steps": str(int(int(data_raw["distance"]) / (int(USER_HEIGHT) / 100 * 0.415))),
+                "steps": str(
+                    int(int(data_raw["distance"]) / (int(USER_HEIGHT) / 100 * 0.415))
+                ),
             }
 
             self.post_message(TreadmillUpdate(data))

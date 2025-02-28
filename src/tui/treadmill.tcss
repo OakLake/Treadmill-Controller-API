@@ -1,0 +1,47 @@
+Screen {
+    align: center middle;
+    content-align: center middle;
+}
+
+.title {
+    content-align: center middle;
+    text-style: bold;
+    padding: 1;
+}
+
+.main-grid {
+    layout: vertical;
+    padding: 1;
+}
+
+Button {
+    width: 24;
+    margin: 2;
+    align: center middle;
+    text-align: center;
+}
+
+.button-group {
+    width: 100%;
+    content-align: center middle;
+    align: center middle;
+    padding: 1;
+}
+
+.section-title {
+    content-align: center middle;
+    text-style: bold;
+    margin: 1;
+}
+
+.telemetry {
+    layout: grid;
+    grid-size: 3 2;
+    padding: 1;
+    text-align: center;
+}
+
+Label {
+    width: 12;
+    margin: 1;
+}

@@ -1,22 +1,20 @@
 import asyncio
-from bleak import BleakClient, BleakError
-from textual.app import App, ComposeResult
-from textual.widgets import Footer, Header
 
+from bleak import BleakClient
+from textual import on
+from textual.app import App, ComposeResult
+from textual.containers import HorizontalGroup, VerticalScroll
+from textual.widgets import Button, Digits, Footer, Header
 
 from src.treadmill.controller import TreadmillController
 from src.treadmill.secret import TREADMILL_ADDR
 
+
 class TreadMillApp(App):
     """A Textual App to manage FTMS enabled treadmill."""
 
-    BINDINGS = [
-        ("s", "start_treadmill", "Start the treadmill"),
-        ("x", "stop_treadmill", "Stop the treadmill"),
-        ("l", "increase_speed", "Increase speed"),
-        ("k", "decrease_speed", "Decrease speed"),
-        ]
-    
+    BINDINGS = []
+
     def __init__(self, treadmill_controller: TreadmillController):
         super().__init__()
         self.controller = treadmill_controller
@@ -24,14 +22,26 @@ class TreadMillApp(App):
     def compose(self) -> ComposeResult:
         yield Header()
         yield Footer()
-    
-    def action_start_treadmill(self) -> None:
-        print("Starting treadmill")
-        self.controller.start()
-    
-    def action_stop_treadmill(self) -> None:
-        print("Stopping treadmill")
-        self.controller.start()
+        yield Button("Start", id="start", variant="success")
+        yield Button("Stop", id="stop", variant="error")
+        yield Button("+", id="inc_speed", variant="success")
+        yield Button("-", id="dec_speed", variant="error")
+
+    @on(Button.Pressed, "#start")
+    async def start_treadmill(self):
+        await self.controller.start()
+
+    @on(Button.Pressed, "#stop")
+    async def stop_treadmill(self):
+        await self.controller.stop()
+
+    @on(Button.Pressed, "#inc_speed")
+    async def increase_speed_treadmill(self):
+        await self.controller.set_speed(2)
+
+    @on(Button.Pressed, "#dec_speed")
+    async def decrease_speed_treadmill(self):
+        await self.controller.set_speed(1)
 
 
 async def run():

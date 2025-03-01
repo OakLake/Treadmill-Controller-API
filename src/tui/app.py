@@ -102,7 +102,7 @@ class TreadMillApp(App):
     async def decrease_speed_treadmill(self):
         await self.controller.set_speed(self.speed - Decimal(0.1))
 
-    async def watch_queue(self):
+    async def stream_telemetry(self):
         while True:
             data_raw = await self.queue.get()
 
@@ -122,7 +122,7 @@ class TreadMillApp(App):
 
     async def on_mount(self):
         """Start the worker task."""
-        self.run_worker(self.watch_queue(), exclusive=True)
+        self.run_worker(self.stream_telemetry(), exclusive=True)
 
     async def on_treadmill_update(self, event: TreadmillUpdate):
         data = event.data

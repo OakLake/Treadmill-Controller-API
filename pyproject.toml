@@ -23,7 +23,9 @@ _isort = "isort ."
 _mypy = "mypy ."
 _flake8 = "flake8 ."
 
-serve_tui = "python src/tui/server.py"
+serve_tui = "python -m src.tui.app"
+serve_tui_webapp = "python src/tui/server.py"
+serve_api = "fastapi run src/app/app.py"
 
 # Compound tasks
 lint = ["_mypy", "_flake8"]

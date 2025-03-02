@@ -117,35 +117,3 @@ class TreadmillController:
         ##
         #
         await self._pause()
-
-
-if __name__ == "__main__":
-    print("Initialising Treadmill Control")
-    from bleak import BleakClient, BleakError, discover
-
-    from src.treadmill.secret import TREADMILL_ADDR
-
-    async def scan_devices():
-        """Scan for bluetooth devices."""
-        devices = await discover()
-        for device in devices:
-            print(device)
-
-    treadmill_address = TREADMILL_ADDR
-    data_point_uuid = "00002acd-0000-1000-8000-00805f9b34fb"
-    control_point_uuid = "00002ad9-0000-1000-8000-00805f9b34fb"
-
-    async def main():
-        """Run the main entrypoint."""
-        try:
-            async with BleakClient(treadmill_address) as client:
-                telemetry_queue = asyncio.Queue()
-                controller = TreadmillController(
-                    client, control_point_uuid, data_point_uuid, telemetry_queue
-                )
-                await asyncio.gather(controller.subscribe())
-        except BleakError as e:
-            print(f"\rCould not connect: {e}")
-
-    asyncio.run(main())
-    # asyncio.run(scan_devices())

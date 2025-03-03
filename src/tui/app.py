@@ -1,6 +1,8 @@
+"""Terminal UI App."""
+
 import asyncio
 from datetime import timedelta
-from decimal import *
+from decimal import Decimal, getcontext
 
 from bleak import BleakClient
 from textual import on

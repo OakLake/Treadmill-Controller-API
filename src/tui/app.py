@@ -41,6 +41,7 @@ class TreadmillUpdate(Message):
     """Custom message to update UI with treadmill telemetry."""
 
     def __init__(self, data):
+        """Init the message."""
         super().__init__()
         self.data = data
 
@@ -54,12 +55,14 @@ class TreadMillApp(App):
     def __init__(
         self, treadmill_controller: TreadmillController, telemetry_queue: asyncio.Queue
     ):
+        """Init the TUI app."""
         super().__init__()
         self.queue = telemetry_queue
         self.controller = treadmill_controller
         self.speed = 0
 
     def compose(self) -> ComposeResult:
+        """Compose the widgets."""
         yield Header()
         yield Footer()
         yield VerticalScroll(
@@ -90,21 +93,26 @@ class TreadMillApp(App):
 
     @on(Button.Pressed, "#start")
     async def start_treadmill(self):
+        """Start treadmill button handler."""
         await self.controller.start()
 
     @on(Button.Pressed, "#stop")
     async def stop_treadmill(self):
+        """Stop treadmill button handler."""
         await self.controller.stop()
 
     @on(Button.Pressed, "#inc_speed")
     async def increase_speed_treadmill(self):
+        """Increase treadmill speed button handler."""
         await self.controller.set_speed(self.speed + Decimal(0.1))
 
     @on(Button.Pressed, "#dec_speed")
     async def decrease_speed_treadmill(self):
+        """Dencrease treadmill speed button handler."""
         await self.controller.set_speed(self.speed - Decimal(0.1))
 
     async def stream_telemetry(self):
+        """Stream telemetry from treadmill."""
         while True:
             data_raw = await self.queue.get()
 
@@ -127,6 +135,7 @@ class TreadMillApp(App):
         self.run_worker(self.stream_telemetry(), exclusive=True)
 
     async def on_treadmill_update(self, event: TreadmillUpdate):
+        """Handle treadmill UI update for updated telemetry."""
         data = event.data
         self.query_one(SpeedDisplay).update(data["speed"])
         self.query_one(DurationDisplay).update(data["duration"])
@@ -136,6 +145,7 @@ class TreadMillApp(App):
 
 
 async def run():
+    """Run the TUI."""
     print("Started Run")
     data_point_uuid = "00002acd-0000-1000-8000-00805f9b34fb"
     control_point_uuid = "00002ad9-0000-1000-8000-00805f9b34fb"
